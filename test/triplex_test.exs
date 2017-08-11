@@ -1,6 +1,5 @@
 defmodule TriplexTest.RegistryTest do
   use ExUnit.Case, async: true
-  doctest Triplex.Unification
 
   setup do
     {:ok, registry} = start_supervised Triplex

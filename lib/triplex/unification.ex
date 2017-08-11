@@ -1,6 +1,53 @@
 defmodule Triplex.Unification do
   alias Triplex.Variable
 
+  def solve(predicates, statements) do
+    solve(predicates, statements, %{})
+  end
+  def solve([], _statements, prev_result) do
+    [prev_result]
+  end
+  def solve(predicates, statements, prev_result) do
+    [first_predicate | tail_predicates] = predicates
+
+    # apply substitution
+    first_predicate = first_predicate
+    |> Tuple.to_list()
+    |> Enum.map(
+      fn (item) ->
+        if Variable.is?(item) and Map.has_key?(prev_result, item.name) do
+          Map.get(prev_result, item.name)
+        else
+          item
+        end
+      end
+    )
+    |> List.to_tuple()
+
+    unify(first_predicate, statements)
+    |> Enum.map(&Map.merge(prev_result, &1))
+    |> Enum.map(&solve(tail_predicates, statements, &1))
+    |> List.flatten()
+  end
+
+  def unify(predicate, statements)
+    when
+      is_tuple(predicate) and is_list(statements)
+    do
+    Enum.reduce(
+      statements,
+      [],
+      fn (statement, result) ->
+        unification = unify(statement, predicate)
+        if unification != nil do
+          [unification | result]
+        else
+          result
+        end
+      end
+    )
+  end
+
   @doc ~S"""
 
     iex> x = Triplex.Variable.new(:x)
@@ -15,6 +62,7 @@ defmodule Triplex.Unification do
     nil
 
   """
+
   def unify(u, v) do
     s = unify(u, v, %{})
     if s == nil do
@@ -54,6 +102,13 @@ defmodule Triplex.Unification do
     # Irregular size causes fail
     iex> Triplex.Unification.unify({1, x, 2}, {1, 2})
     nil
+    # Can solve maps
+    iex> Triplex.Unification.unify(%{g: x, l: 1}, %{g: 12, l: 1})
+    %{x: 12}
+    iex> Triplex.Unification.unify(%{g: x, l: y}, %{g: 12, l: 1})
+    %{x: 12, y: 1}
+    iex> Triplex.Unification.unify({1, x}, %{g: 12, l: 1})
+    nil
 
   """
 
@@ -73,21 +128,6 @@ defmodule Triplex.Unification do
       end
     )
   end
-
-  @doc ~S"""
-  Unify maps
-
-    iex> x = Triplex.Variable.new(:x)
-    %Triplex.Variable{name: :x}
-    iex> y = Triplex.Variable.new(:y)
-    %Triplex.Variable{name: :y}
-    # Can solve maps
-    iex> Triplex.Unification.unify(%{g: x, l: 1}, %{g: 12, l: 1})
-    %{x: 12}
-    iex> Triplex.Unification.unify(%{g: x, l: y}, %{g: 12, l: 1})
-    %{x: 12, y: 1}
-
-  """
 
   def _unify(u, v, s)
     when
@@ -110,15 +150,6 @@ defmodule Triplex.Unification do
     )
   end
 
-  @doc ~S"""
-  Different types or sizes fail
-
-    iex> x = Triplex.Variable.new(:x)
-    %Triplex.Variable{name: :x}
-    iex> Triplex.Unification.unify({1, x}, %{g: 12, l: 1})
-    nil
-
-  """
   def _unify(_, _, _) do
     nil
   end
