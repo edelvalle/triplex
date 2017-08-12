@@ -1,7 +1,7 @@
 defmodule Triplex.Variable do
   defstruct [:name]
 
-  def new(name) do
+  def v(name) do
     %Triplex.Variable{name: name}
   end
 

@@ -50,9 +50,9 @@ defmodule Triplex.Unification do
 
   @doc ~S"""
 
-    iex> x = Triplex.Variable.new(:x)
+    iex> x = Triplex.Variable.v(:x)
     %Triplex.Variable{name: :x}
-    iex> y = Triplex.Variable.new(:y)
+    iex> y = Triplex.Variable.v(:y)
     %Triplex.Variable{name: :y}
     # Can solve simple case
     iex> Triplex.Unification.unify(x, 1)
@@ -89,9 +89,9 @@ defmodule Triplex.Unification do
   @doc ~S"""
   Unify tuples
 
-    iex> x = Triplex.Variable.new(:x)
+    iex> x = Triplex.Variable.v(:x)
     %Triplex.Variable{name: :x}
-    iex> y = Triplex.Variable.new(:y)
+    iex> y = Triplex.Variable.v(:y)
     %Triplex.Variable{name: :y}
     # Can solve simple tuples
     iex> Triplex.Unification.unify({1, x}, {1, 2})
