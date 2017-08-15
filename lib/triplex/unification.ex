@@ -7,38 +7,42 @@ defmodule Triplex.Unification do
   def solve([], _statements, prev_result) do
     [prev_result]
   end
-  def solve(predicates, statements, prev_result) do
-    [first_predicate | tail_predicates] = predicates
-
-    # apply substitution
-    first_predicate = first_predicate
-    |> Tuple.to_list()
-    |> Enum.map(
-      fn (item) ->
-        if Variable.is?(item) and Map.has_key?(prev_result, item.name) do
-          Map.get(prev_result, item.name)
-        else
-          item
-        end
-      end
-    )
-    |> List.to_tuple()
-
-    unify(first_predicate, statements)
+  def solve([first_predicate | tail_predicates], statements, prev_result) do
+    first_predicate
+    |> apply_substitution(prev_result)
+    |> unify(statements)
     |> Enum.map(&Map.merge(prev_result, &1))
     |> Enum.map(&solve(tail_predicates, statements, &1))
     |> List.flatten()
   end
 
-  def unify(predicate, statements)
-    when
-      is_tuple(predicate) and is_list(statements)
-    do
+  defp apply_substitution(predicate, results) when is_tuple(predicate) do
+    predicate
+    |> Tuple.to_list()
+    |> Enum.map(&substitute_a_value(&1, results))
+    |> List.to_tuple()
+  end
+  defp apply_substitution(predicate, results) when is_map(predicate) do
+    predicate
+    |> Map.to_list()
+    |> Enum.map(&substitute_a_value(&1, results))
+    |> Map.new()
+  end
+
+  defp substitute_a_value(item, results) do
+    if Variable.is?(item) and Map.has_key?(results, item.name) do
+      Map.get(results, item.name)
+    else
+      item
+    end
+  end
+
+  def unify(predicate, statements) when is_list(statements) do
     Enum.reduce(
       statements,
       [],
       fn (statement, result) ->
-        unification = unify(statement, predicate)
+        unification = unify(predicate, statement)
         if unification != nil do
           [unification | result]
         else
@@ -76,12 +80,12 @@ defmodule Triplex.Unification do
   end
 
   def unify(u, v, s) do
-    u = transive_get(s, u)
-    v = transive_get(s, v)
+    u = Map.get(s, u, u)
+    v = Map.get(s, v, v)
     cond do
+      u == v -> s
       Variable.is?(u) -> Map.put s, u, v
       Variable.is?(v) -> Map.put s, v, u
-      u == v -> s
       true -> _unify u, v, s
     end
   end
@@ -129,12 +133,7 @@ defmodule Triplex.Unification do
     )
   end
 
-  def _unify(u, v, s)
-    when
-      is_map(u) and
-      is_map(v) and
-      map_size(u) == map_size(v)
-    do
+  def _unify(u, v, s) when is_map(u) and is_map(v) do
     u
     |> Map.to_list()
     |> Enum.reduce_while(
@@ -152,24 +151,6 @@ defmodule Triplex.Unification do
 
   def _unify(_, _, _) do
     nil
-  end
-
-  @doc ~S"""
-  Transitive Map.get
-
-  # Example
-
-    iex> d = %{1 => 2, 2 => 3, 3 => 4}
-    iex> Triplex.Unification.transive_get d, 1
-    4
-
-  """
-  def transive_get(map, key)  do
-    if not is_map(key) and Map.has_key?(map, key) do
-      transive_get(map, Map.get(map, key))
-    else
-      key
-    end
   end
 
 end
