@@ -4,6 +4,7 @@ defmodule Triplex.Unification do
   def solve(predicates, statements) do
     solve(predicates, statements, %{})
   end
+
   def solve([], _statements, prev_result) do
     [prev_result]
   end
@@ -19,22 +20,14 @@ defmodule Triplex.Unification do
   defp apply_substitution(predicate, results) when is_tuple(predicate) do
     predicate
     |> Tuple.to_list()
-    |> Enum.map(&substitute_a_value(&1, results))
+    |> Enum.map(&Variable.substitute(&1, results))
     |> List.to_tuple()
   end
   defp apply_substitution(predicate, results) when is_map(predicate) do
     predicate
     |> Map.to_list()
-    |> Enum.map(&substitute_a_value(&1, results))
+    |> Enum.map(&Variable.substitute(&1, results))
     |> Map.new()
-  end
-
-  defp substitute_a_value(item, results) do
-    if Variable.is?(item) and Map.has_key?(results, item.name) do
-      Map.get(results, item.name)
-    else
-      item
-    end
   end
 
   def unify(predicate, statements) when is_list(statements) do
@@ -52,105 +45,52 @@ defmodule Triplex.Unification do
     )
   end
 
-  @doc ~S"""
-
-    iex> x = Triplex.Variable.v(:x)
-    %Triplex.Variable{name: :x}
-    iex> y = Triplex.Variable.v(:y)
-    %Triplex.Variable{name: :y}
-    # Can solve simple case
-    iex> Triplex.Unification.unify(x, 1)
-    %{x: 1}
-    # Mismatch causes fail
-    iex> Triplex.Unification.unify({y, x, 1}, {1, 2, 2})
-    nil
-
-  """
-
-  def unify(u, v) do
-    s = unify(u, v, %{})
-    if s == nil do
-      nil
-    else
-      s
-      |> Map.to_list()
-      |> Enum.map(fn ({key, value}) -> {key.name, value} end)
-      |> Map.new()
-    end
+  def unify(predicate, statement) do
+    unify(predicate, statement, %{})
   end
 
-  def unify(u, v, s) do
-    u = Map.get(s, u, u)
-    v = Map.get(s, v, v)
-    cond do
-      u == v -> s
-      Variable.is?(u) -> Map.put s, u, v
-      Variable.is?(v) -> Map.put s, v, u
-      true -> _unify u, v, s
-    end
+  def unify(%Variable{name: name}, value, solutions) do
+    Map.put solutions, name, value
   end
-
-  @doc ~S"""
-  Unify tuples
-
-    iex> x = Triplex.Variable.v(:x)
-    %Triplex.Variable{name: :x}
-    iex> y = Triplex.Variable.v(:y)
-    %Triplex.Variable{name: :y}
-    # Can solve simple tuples
-    iex> Triplex.Unification.unify({1, x}, {1, 2})
-    %{x: 2}
-    # Can solve tuples with multiple vars
-    iex> Triplex.Unification.unify({y, x}, {1, 2})
-    %{y: 1, x: 2}
-    # Irregular size causes fail
-    iex> Triplex.Unification.unify({1, x, 2}, {1, 2})
-    nil
-    # Can solve maps
-    iex> Triplex.Unification.unify(%{g: x, l: 1}, %{g: 12, l: 1})
-    %{x: 12}
-    iex> Triplex.Unification.unify(%{g: x, l: y}, %{g: 12, l: 1})
-    %{x: 12, y: 1}
-    iex> Triplex.Unification.unify({1, x}, %{g: 12, l: 1})
-    nil
-
-  """
-
-  def _unify(u, v, s)
+  def unify(predicate, statement, solutions)
     when
-      is_tuple(u) and
-      is_tuple(v) and
-      tuple_size(u) == tuple_size(v)
+      is_tuple(predicate) and
+      is_tuple(statement) and
+      tuple_size(predicate) == tuple_size(statement)
     do
-    [u, v]
+    [predicate, statement]
     |> List.zip()
     |> Enum.reduce_while(
-      s,
-      fn ({u, v}, s) ->
-        s = unify(u, v, s)
-        if s == nil, do: {:halt, nil}, else: {:cont, s}
+      solutions,
+      fn ({predicate, statement}, solutions) ->
+        solutions = unify(predicate, statement, solutions)
+        if solutions == nil, do: {:halt, nil}, else: {:cont, solutions}
       end
     )
   end
 
-  def _unify(u, v, s) when is_map(u) and is_map(v) do
-    u
+  def unify(predicate, statement, solutions)
+    when
+      is_map(predicate) and is_map(statement)
+    do
+    predicate
     |> Map.to_list()
     |> Enum.reduce_while(
-      s,
-      fn ({key, u_val}, s) ->
-        if Map.has_key?(v, key) do
-          s = unify(u_val, Map.get(v, key), s)
-          if s == nil, do: {:halt, nil}, else: {:cont, s}
+      solutions,
+      fn ({key, u_val}, solutions) ->
+        if Map.has_key?(statement, key) do
+          solutions = unify(u_val, Map.get(statement, key), solutions)
+          if solutions == nil, do: {:halt, nil}, else: {:cont, solutions}
         else
           {:halt, nil}
         end
       end
     )
+    |> (fn (solutions) -> if(solutions == %{}, do: nil, else: solutions) end).()
   end
 
-  def _unify(_, _, _) do
-    nil
+  def unify(x, y, solutions) do
+    if x == y, do: solutions, else: nil
   end
 
 end
