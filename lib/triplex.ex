@@ -17,8 +17,8 @@ defmodule Triplex do
     GenServer.cast(server, {:add, triplets})
   end
 
-  def solve(server, predicate) do
-    GenServer.call(server, {:solve, predicate})
+  def solve(server, predicates) do
+    GenServer.call(server, {:solve, predicates})
   end
 
   ## Server Callbacks
@@ -31,7 +31,7 @@ defmodule Triplex do
     {:noreply, new_triplets ++ triplets}
   end
 
-  def handle_call({:solve, predicate}, _from, triplets) do
-    {:reply, [predicate], triplets}
+  def handle_call({:solve, predicates}, _from, triplets) do
+    {:reply, [predicates], triplets}
   end
 end
