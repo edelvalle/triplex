@@ -21,10 +21,12 @@ defmodule Triplex.Unification do
     |> apply_substitution(prev_result)
     |> unify(statements)
     |> Enum.map(&Map.merge(prev_result, &1))
-    |> Enum.map(&Task.async(
-        Triplex.Unification, :solve, [tail_predicates, statements, &1]
-    ))
-    |> Enum.map(&Task.await/1)
+    |> Task.async_stream(
+      fn (solution) ->
+        Triplex.Unification.solve(tail_predicates, statements, solution)
+      end
+    )
+    |> Enum.map(fn ({:ok, x}) -> x end)
     |> List.flatten()
   end
 
