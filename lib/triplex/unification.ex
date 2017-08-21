@@ -8,6 +8,14 @@ defmodule Triplex.Unification do
   def solve([], _statements, prev_result) do
     [prev_result]
   end
+  def solve([first_predicate | tail_predicates], statements, prev_result)
+    when is_function(first_predicate) do
+    if first_predicate.(prev_result) do
+      solve(tail_predicates, statements, prev_result)
+    else
+      []
+    end
+  end
   def solve([first_predicate | tail_predicates], statements, prev_result) do
     first_predicate
     |> apply_substitution(prev_result)
