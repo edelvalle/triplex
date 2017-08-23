@@ -7,7 +7,7 @@ defmodule TriplexTest.InstanceTest do
     %{instance: instance}
   end
 
-  test "spawns buckets", %{instance: instance} do
+  test "test state in instances can time travel", %{instance: instance} do
 
     Instance.set instance, %{name: "Alex", age: 12}
     before_birthday = Timex.now
