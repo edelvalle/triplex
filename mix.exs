@@ -16,6 +16,7 @@ defmodule Triplex.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [
+      applications: [:timex],
       extra_applications: [:logger],
     ]
   end
@@ -30,6 +31,6 @@ defmodule Triplex.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+     [{:timex, "~> 3.1"}]
   end
 end
